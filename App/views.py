@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.generics import UpdateAPIView
 from rest_framework.views import APIView
 from .models import Task, CrudUser, UserProfile, Author, Book, Student, Course, Enrollment
-from .serializer import TaskSerializer
+from .serializer import TaskSerializer, TaskSerializerCreated_at
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -31,25 +31,19 @@ class CreateTaskView(APIView):
         # Return errors if the data is invalid
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         # Fetch all tasks from the database
         tasks = Task.objects.all()
 
-        # Prepare the data without using a serializer
-        task_list = []
-        for task in tasks:
-            task_list.append({
-                'id': task.id,
-                'title': task.title,
-                'description': task.description,
-                'created_at': task.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Format datetime
-            })
         # Check if there are no tasks in the database
         if not tasks.exists():
-            return JsonResponse({'message': 'No tasks found'}, status=200)
+            return JsonResponse({'message': 'No tasks found'}, status=status.HTTP_200_OK)
 
-        # Return a Response with the list of tasks
-        return JsonResponse(task_list, safe=False)
+        # Use a serializer to prepare the data
+        serializer = TaskSerializerCreated_at(tasks, many=True)
+
+        # Return the serialized data
+        return JsonResponse(serializer.data, status=status.HTTP_200_OK, safe=False)
 
 class CreateTaskViewGetById(View):
 

@@ -5,34 +5,31 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import json
 
+from rest_framework import status
 from rest_framework.generics import UpdateAPIView
 from rest_framework.views import APIView
 from .models import Task, CrudUser, UserProfile, Author, Book, Student, Course, Enrollment
+from .serializer import TaskSerializer
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CreateTaskView(APIView):
     def post(self, request, *args, **kwargs):
-        try:
-            # Parse the JSON request body
-            data = json.loads(request.body)
-            title = data.get('title')
-            description = data.get('description')
+        # Deserialize the request data using DRF serializers
+        serializer = TaskSerializer(data=request.data)
 
-            # Validate data
-            if not title or not description:
-                return JsonResponse({'error': 'Title and description are required.'}, status=400)
-
-            # Create a new task
-            task = Task.objects.create(title=title, description=description)
-
-            # Respond with the created task's ID and message
-            return JsonResponse({
-                'message': 'Task created successfully!',
-                'task_id': task.id
-            }, status=201)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON format.'}, status=400)
+        if serializer.is_valid():
+            # Save the valid data to create a new task
+            task = serializer.save()
+            return JsonResponse(
+                {
+                    'message': 'Task created successfully!',
+                    'task_id': task.id
+                },
+                status=status.HTTP_201_CREATED
+            )
+        # Return errors if the data is invalid
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
         # Fetch all tasks from the database
